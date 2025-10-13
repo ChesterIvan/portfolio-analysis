@@ -137,23 +137,22 @@ const Index = () => {
           onPortfoliosChange={loadPortfolios}
         />
 
-        <div className="flex gap-4 items-center">
-          <FileUpload onFileUploaded={handleFileUploaded} />
-          {selectedPortfolioId && (
-            <div className="flex gap-2">
-              <RecordDialog 
-                portfolioId={selectedPortfolioId} 
-                onRecordSaved={handleRecordSaved}
-                mode="add"
-              />
-              <RecordDialog 
-                portfolioId={selectedPortfolioId} 
-                onRecordSaved={handleRecordSaved}
-                mode="edit"
-              />
-            </div>
-          )}
-        </div>
+        {selectedPortfolioId && (
+          <div className="flex gap-2">
+            <RecordDialog 
+              portfolioId={selectedPortfolioId} 
+              onRecordSaved={handleRecordSaved}
+              mode="add"
+            />
+            <RecordDialog 
+              portfolioId={selectedPortfolioId} 
+              onRecordSaved={handleRecordSaved}
+              mode="edit"
+            />
+          </div>
+        )}
+
+        <FileUpload onFileUploaded={handleFileUploaded} />
 
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <MetricCard
