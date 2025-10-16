@@ -9,6 +9,7 @@ import { InvestmentBehaviorAnalysis } from "@/components/InvestmentBehaviorAnaly
 import { FileUpload } from "@/components/FileUpload";
 import { PortfolioSelector } from "@/components/PortfolioSelector";
 import { RecordDialog } from "@/components/RecordDialog";
+import { ViewRecordsDialog } from "@/components/ViewRecordsDialog";
 import {
   parseCSV,
   calculateCorrelations,
@@ -148,6 +149,10 @@ const Index = () => {
               portfolioId={selectedPortfolioId} 
               onRecordSaved={handleRecordSaved}
               mode="edit"
+            />
+            <ViewRecordsDialog
+              portfolioId={selectedPortfolioId}
+              onRecordUpdated={handleRecordSaved}
             />
           </div>
         )}
