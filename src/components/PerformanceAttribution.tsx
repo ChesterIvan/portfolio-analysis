@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { PortfolioData, RiskMetrics } from "@/utils/portfolioAnalysis";
-import { Target, TrendingUp, TrendingDown } from "lucide-react";
+import { Target, TrendingUp } from "lucide-react";
 
 interface PerformanceAttributionProps {
   data: PortfolioData[];
@@ -65,13 +65,12 @@ export function PerformanceAttribution({
       results.push({
         date: new Date(data[i].date).toLocaleDateString('en-US', { 
           month: 'short', 
-          day: 'numeric',
           year: 'numeric'
         }),
         fullDate: data[i].date,
-        portfolioReturn,
-        benchmarkReturn,
-        excessReturn: portfolioReturn - benchmarkReturn
+        portfolio: portfolioReturn,
+        benchmark: benchmarkReturn,
+        excess: portfolioReturn - benchmarkReturn
       });
     }
     
@@ -80,19 +79,26 @@ export function PerformanceAttribution({
 
   const rollingData = calculateRollingPerformance();
   
-  // Debug: Log the data range to understand what's happening
-  if (rollingData.length > 0) {
-    console.log('Rolling Performance Data Range:', {
-      firstDate: rollingData[0].fullDate,
-      lastDate: rollingData[rollingData.length - 1].fullDate,
-      totalPoints: rollingData.length,
-      firstFewDates: rollingData.slice(0, 5).map(d => d.fullDate),
-      lastFewDates: rollingData.slice(-5).map(d => d.fullDate)
-    });
-  }
-  
-  // Sample data for better visualization (every 10th point to show full range)
-  const sampledRollingData = rollingData.filter((_, index) => index % 10 === 0 || index === rollingData.length - 1);
+  // Sample data more aggressively for cleaner visualization (every 20th point or monthly)
+  const sampledRollingData = rollingData.filter((_, index) => 
+    index % 20 === 0 || index === rollingData.length - 1
+  );
+
+  // Calculate conclusion for rolling performance
+  const getRollingConclusion = () => {
+    if (rollingData.length === 0) return '';
+    
+    const excessReturns = rollingData.map(d => d.excess);
+    const avgExcess = excessReturns.reduce((a, b) => a + b, 0) / excessReturns.length;
+    const latestExcess = excessReturns[excessReturns.length - 1];
+    const positiveMonths = excessReturns.filter(r => r > 0).length;
+    const winRate = (positiveMonths / excessReturns.length) * 100;
+    
+    const performance = avgExcess > 0 ? 'outperformed' : 'underperformed';
+    const consistency = winRate > 60 ? 'consistently' : winRate > 40 ? 'moderately' : 'inconsistently';
+    
+    return `Over the rolling 90-day periods, the portfolio has ${performance} the CSI 300 benchmark by an average of ${Math.abs(avgExcess).toFixed(2)}% ${consistency} (win rate: ${winRate.toFixed(1)}%). Latest excess return: ${latestExcess >= 0 ? '+' : ''}${latestExcess.toFixed(2)}%.`;
+  };
 
   // Performance attribution data for pie chart
   const attributionData = [
@@ -175,46 +181,43 @@ export function PerformanceAttribution({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            Rolling Performance vs Benchmark
+            90-Day Rolling Performance
           </CardTitle>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
-            <div className="text-2xl font-bold text-green-600">
-              {(attribution.totalReturn - attribution.benchmarkReturn).toFixed(2)}%
+            <div className="text-2xl font-bold">
+              <span className={attribution.totalReturn - attribution.benchmarkReturn >= 0 ? "text-green-600" : "text-red-600"}>
+                {attribution.totalReturn - attribution.benchmarkReturn >= 0 ? "+" : ""}
+                {(attribution.totalReturn - attribution.benchmarkReturn).toFixed(2)}%
+              </span>
             </div>
             <div className="text-sm text-muted-foreground">
-              Excess Return vs Average Benchmark
-            </div>
-            <div className="text-xs text-muted-foreground mt-1">
-              Data points: {rollingData.length} | Showing: {sampledRollingData.length} samples
+              Total Excess Return vs Benchmark
             </div>
           </div>
           
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={sampledRollingData}>
+          <ResponsiveContainer width="100%" height={220}>
+            <LineChart data={sampledRollingData}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis 
                 dataKey="date" 
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 11 }}
                 interval="preserveStartEnd"
               />
               <YAxis 
                 label={{ value: 'Return (%)', angle: -90, position: 'insideLeft' }}
-                tick={{ fontSize: 10 }}
+                tick={{ fontSize: 11 }}
               />
               <Tooltip 
-                formatter={(value: number, name: string) => {
-                  if (name === 'portfolioReturn') return [`${value.toFixed(2)}%`, 'Portfolio'];
-                  if (name === 'benchmarkReturn') return [`${value.toFixed(2)}%`, 'Benchmark'];
-                  if (name === 'excessReturn') return [`${value.toFixed(2)}%`, 'Excess Return'];
-                  return [value, name];
-                }}
+                formatter={(value: number, name: string) => [
+                  `${(value as number).toFixed(2)}%`,
+                  name === 'portfolio' ? 'Portfolio' : name === 'benchmark' ? 'CSI 300' : 'Excess'
+                ]}
                 labelFormatter={(label, payload) => {
                   if (payload && payload[0] && payload[0].payload) {
                     const fullDate = new Date(payload[0].payload.fullDate);
                     return `Date: ${fullDate.toLocaleDateString('en-US', { 
-                      weekday: 'short',
                       year: 'numeric', 
                       month: 'long', 
                       day: 'numeric' 
@@ -223,13 +226,33 @@ export function PerformanceAttribution({
                   return `Date: ${label}`;
                 }}
               />
-              <Bar dataKey="portfolioReturn" fill="#3b82f6" name="Portfolio" />
-              <Bar dataKey="benchmarkReturn" fill="#6b7280" name="Benchmark" />
-            </BarChart>
+              <Legend />
+              <Line 
+                type="monotone" 
+                dataKey="portfolio" 
+                stroke="#3b82f6" 
+                strokeWidth={2}
+                dot={false}
+                name="Portfolio"
+              />
+              <Line 
+                type="monotone" 
+                dataKey="benchmark" 
+                stroke="#6b7280" 
+                strokeWidth={2}
+                dot={false}
+                strokeDasharray="5 5"
+                name="CSI 300"
+              />
+            </LineChart>
           </ResponsiveContainer>
           
-          <div className="mt-4 text-xs text-muted-foreground">
-            <p>90-day rolling returns showing portfolio performance relative to CSI 300 benchmark.</p>
+          {/* Conclusion Remarks */}
+          <div className="mt-4 p-3 bg-muted rounded-lg">
+            <h4 className="font-semibold text-sm mb-2">Analysis</h4>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              {getRollingConclusion()}
+            </p>
           </div>
         </CardContent>
       </Card>

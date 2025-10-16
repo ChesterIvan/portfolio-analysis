@@ -207,7 +207,7 @@ const Index = () => {
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
-          <RollingMetricsChart rollingMetrics={rollingMetrics} />
+          <RollingMetricsChart rollingMetrics={rollingMetrics} portfolioData={data} />
           <DrawdownChart data={data} />
         </div>
 
