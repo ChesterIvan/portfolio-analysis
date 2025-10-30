@@ -2,6 +2,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
 import { PortfolioData, RiskMetrics } from "@/utils/portfolioAnalysis";
 import { Target, TrendingUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 interface PerformanceAttributionProps {
   data: PortfolioData[];
@@ -15,12 +17,14 @@ interface PerformanceAttributionProps {
   };
 }
 
-export function PerformanceAttribution({ 
-  data, 
-  riskMetrics, 
-  annualizedReturn, 
-  benchmarkReturns 
+export function PerformanceAttribution({
+  data,
+  riskMetrics,
+  annualizedReturn,
+  benchmarkReturns
 }: PerformanceAttributionProps) {
+  const [selectedPeriod, setSelectedPeriod] = useState<'90d' | '1y' | '3y' | '5y'>('90d');
+
   // Calculate performance attribution
   const calculateAttribution = () => {
     const totalReturn = annualizedReturn;
@@ -55,7 +59,7 @@ export function PerformanceAttribution({
 
   // Calculate rolling performance vs benchmark
   const calculateRollingPerformance = () => {
-    const window = 90; // 90-day rolling window
+    const window = selectedPeriod === '90d' ? 90 : selectedPeriod === '1y' ? 365 : selectedPeriod === '3y' ? 1095 : 1825; // Dynamic window based on selected period (5y = 1825 days)
     const results = [];
     
     for (let i = window; i < data.length; i++) {
@@ -87,17 +91,19 @@ export function PerformanceAttribution({
   // Calculate conclusion for rolling performance
   const getRollingConclusion = () => {
     if (rollingData.length === 0) return '';
-    
+
+    const periodText = selectedPeriod === '90d' ? '90-day' : selectedPeriod === '1y' ? '1-year' : selectedPeriod === '3y' ? '3-year' : '5-year';
+
     const excessReturns = rollingData.map(d => d.excess);
     const avgExcess = excessReturns.reduce((a, b) => a + b, 0) / excessReturns.length;
     const latestExcess = excessReturns[excessReturns.length - 1];
     const positiveMonths = excessReturns.filter(r => r > 0).length;
     const winRate = (positiveMonths / excessReturns.length) * 100;
-    
+
     const performance = avgExcess > 0 ? 'outperformed' : 'underperformed';
     const consistency = winRate > 60 ? 'consistently' : winRate > 40 ? 'moderately' : 'inconsistently';
-    
-    return `Over the rolling 90-day periods, the portfolio has ${performance} the CSI 300 benchmark by an average of ${Math.abs(avgExcess).toFixed(2)}% ${consistency} (win rate: ${winRate.toFixed(1)}%). Latest excess return: ${latestExcess >= 0 ? '+' : ''}${latestExcess.toFixed(2)}%.`;
+
+    return `Over the rolling ${periodText} periods, the portfolio has ${performance} the CSI 300 benchmark by an average of ${Math.abs(avgExcess).toFixed(2)}% ${consistency} (win rate: ${winRate.toFixed(1)}%). Latest excess return: ${latestExcess >= 0 ? '+' : ''}${latestExcess.toFixed(2)}%.`;
   };
 
   // Performance attribution data for pie chart
@@ -128,22 +134,30 @@ export function PerformanceAttribution({
             </div>
           </div>
           
-          <ResponsiveContainer width="100%" height={200}>
+          <ResponsiveContainer width="100%" height={280}>
             <PieChart>
               <Pie
                 data={attributionData}
                 cx="50%"
                 cy="50%"
-                innerRadius={40}
-                outerRadius={80}
+                innerRadius={50}
+                outerRadius={90}
                 dataKey="value"
-                label={({ name, value }) => `${name}: ${value.toFixed(1)}%`}
+                label={({ value, percent }) => `${(percent * 100).toFixed(0)}%`}
+                labelLine={{ stroke: '#666', strokeWidth: 1 }}
               >
                 {attributionData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={entry.color} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value: number) => `${value.toFixed(2)}%`} />
+              <Tooltip
+                formatter={(value: number, name: string) => [`${value.toFixed(2)}%`, name]}
+              />
+              <Legend
+                verticalAlign="bottom"
+                height={36}
+                formatter={(value) => <span className="text-xs">{value}</span>}
+              />
             </PieChart>
           </ResponsiveContainer>
           
@@ -181,8 +195,38 @@ export function PerformanceAttribution({
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5" />
-            90-Day Rolling Performance
+            {selectedPeriod === '90d' ? '90-Day' : selectedPeriod === '1y' ? '1-Year' : selectedPeriod === '3y' ? '3-Year' : '5-Year'} Rolling Performance
           </CardTitle>
+          <div className="flex gap-1 mt-2">
+            <Button
+              variant={selectedPeriod === '90d' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedPeriod('90d')}
+            >
+              90D
+            </Button>
+            <Button
+              variant={selectedPeriod === '1y' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedPeriod('1y')}
+            >
+              1Y
+            </Button>
+            <Button
+              variant={selectedPeriod === '3y' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedPeriod('3y')}
+            >
+              3Y
+            </Button>
+            <Button
+              variant={selectedPeriod === '5y' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setSelectedPeriod('5y')}
+            >
+              5Y
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <div className="mb-4">
