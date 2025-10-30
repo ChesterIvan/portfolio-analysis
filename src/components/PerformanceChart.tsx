@@ -83,10 +83,38 @@ export function PerformanceChart({ data }: PerformanceChartProps) {
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend />
-            <Line type="monotone" dataKey="Fund" stroke="hsl(var(--primary))" strokeWidth={2} />
-            <Line type="monotone" dataKey="Shanghai Composite" stroke="hsl(var(--chart-1))" strokeWidth={1.5} />
-            <Line type="monotone" dataKey="Shenzhen Component" stroke="hsl(var(--chart-2))" strokeWidth={1.5} />
-            <Line type="monotone" dataKey="CSI 300" stroke="hsl(var(--chart-3))" strokeWidth={1.5} />
+            <Line
+              type="monotone"
+              dataKey="Fund"
+              stroke="hsl(var(--primary))"
+              strokeWidth={2.5}
+              dot={false}
+              activeDot={{ r: 5 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="Shanghai Composite"
+              stroke="hsl(var(--chart-1))"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="Shenzhen Component"
+              stroke="hsl(var(--chart-2))"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+            />
+            <Line
+              type="monotone"
+              dataKey="CSI 300"
+              stroke="hsl(var(--chart-3))"
+              strokeWidth={2}
+              dot={false}
+              activeDot={{ r: 4 }}
+            />
           </LineChart>
         </ResponsiveContainer>
       </CardContent>
