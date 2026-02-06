@@ -37,6 +37,20 @@ export function MonthlyReturnsHeatmap({ monthlyReturns }: MonthlyReturnsHeatmapP
     yearlyTotals.set(year, (compounded - 1) * 100);
   });
 
+  const renderMonthCell = (year: number, monthIndex: number) => {
+    const val = dataMap.get(`${year}-${monthIndex}`);
+    if (val === undefined) {
+      return <td key={monthIndex} className="p-1 text-center"><div className="bg-gray-50 rounded px-1 py-0.5">-</div></td>;
+    }
+    return (
+      <td key={monthIndex} className="p-1 text-center">
+        <div className={`rounded px-1 py-0.5 font-mono ${getHeatmapColor(val)}`}>
+          {val.toFixed(1)}%
+        </div>
+      </td>
+    );
+  };
+
   return (
     <Card>
       <CardHeader>
@@ -61,19 +75,7 @@ export function MonthlyReturnsHeatmap({ monthlyReturns }: MonthlyReturnsHeatmapP
               {years.map(year => (
                 <tr key={year}>
                   <td className="p-1 font-medium">{year}</td>
-                  {Array.from({ length: 12 }, (_, i) => {
-                    const val = dataMap.get(`${year}-${i}`);
-                    if (val === undefined) {
-                      return <td key={i} className="p-1 text-center"><div className="bg-gray-50 rounded px-1 py-0.5">-</div></td>;
-                    }
-                    return (
-                      <td key={i} className="p-1 text-center">
-                        <div className={`rounded px-1 py-0.5 font-mono ${getHeatmapColor(val)}`}>
-                          {val.toFixed(1)}%
-                        </div>
-                      </td>
-                    );
-                  })}
+                  {Array.from({ length: 12 }, (_, i) => renderMonthCell(year, i))}
                   <td className="p-1 text-center">
                     <div className={`rounded px-1 py-0.5 font-mono font-bold ${getHeatmapColor(yearlyTotals.get(year) || 0)}`}>
                       {(yearlyTotals.get(year) || 0).toFixed(1)}%

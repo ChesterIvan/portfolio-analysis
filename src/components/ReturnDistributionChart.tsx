@@ -23,6 +23,9 @@ function getKurtosisLabel(kurtosis: number): string {
 export function ReturnDistributionChart({ distribution }: ReturnDistributionChartProps) {
   const { bins, mean, median, skewness, kurtosis } = distribution;
 
+  const zeroIndex = bins.findIndex(b => b.midpoint >= 0);
+  const zeroRefLine = zeroIndex > 0 ? bins[zeroIndex].range : undefined;
+
   return (
     <Card>
       <CardHeader>
@@ -75,7 +78,7 @@ export function ReturnDistributionChart({ distribution }: ReturnDistributionChar
               formatter={(value: number) => [value, 'Count']}
               labelFormatter={(label) => `Return: ${label}`}
             />
-            <ReferenceLine x={bins.findIndex(b => b.midpoint >= 0) > 0 ? bins[bins.findIndex(b => b.midpoint >= 0)].range : undefined} stroke="#6b7280" strokeDasharray="2 2" />
+            <ReferenceLine x={zeroRefLine} stroke="#6b7280" strokeDasharray="2 2" />
             <Bar
               dataKey="count"
               fill="#6366f1"
