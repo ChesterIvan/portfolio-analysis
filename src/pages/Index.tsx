@@ -58,8 +58,14 @@ const Index = () => {
       } else {
         // Load default CSV and save to database
         try {
-          const csvUrl = new URL("PORTFOLIO_SNAPSHOT.csv", import.meta.env.BASE_URL).toString();
-          const response = await fetch(csvUrl);
+          const baseUrl = import.meta.env.BASE_URL || "/";
+          const csvPath = baseUrl.endsWith("/") ? `${baseUrl}PORTFOLIO_SNAPSHOT.csv` : `${baseUrl}/PORTFOLIO_SNAPSHOT.csv`;
+          const response = await fetch(csvPath);
+          
+          if (!response.ok) {
+            throw new Error(`Failed to fetch CSV: ${response.status} ${response.statusText}`);
+          }
+          
           const csvText = await response.text();
           const parsedData = parseCSV(csvText);
           
@@ -71,6 +77,8 @@ const Index = () => {
           setData(parsedData);
         } catch (error) {
           console.error("Error loading default portfolio data:", error);
+          // Set empty data to show error state instead of infinite loading
+          setData([]);
         }
       }
       
