@@ -15,6 +15,9 @@ import { FileUpload } from "@/components/FileUpload";
 import { PortfolioSelector } from "@/components/PortfolioSelector";
 import { RecordDialog } from "@/components/RecordDialog";
 import { ViewRecordsDialog } from "@/components/ViewRecordsDialog";
+import { MonthlyReturnsHeatmap } from "@/components/MonthlyReturnsHeatmap";
+import { ReturnDistributionChart } from "@/components/ReturnDistributionChart";
+import { CaptureRatioCard } from "@/components/CaptureRatioCard";
 import {
   parseCSV,
   calculateCorrelations,
@@ -22,6 +25,10 @@ import {
   calculateOverallMetrics,
   calculateRiskMetrics,
   calculateRollingMetrics,
+  calculateMonthlyReturns,
+  calculateReturnDistribution,
+  calculateDailyReturns,
+  calculateCaptureRatios,
   PortfolioData,
 } from "@/utils/portfolioAnalysis";
 import {
@@ -136,6 +143,10 @@ const Index = () => {
   const annualReturns = calculateAnnualReturns(data);
   const riskMetrics = calculateRiskMetrics(data);
   const rollingMetrics = calculateRollingMetrics(data, 252); // Use 1 year window to ensure we get rolling data across the entire period
+  const monthlyReturns = calculateMonthlyReturns(data);
+  const dailyReturns = calculateDailyReturns(data);
+  const returnDistribution = calculateReturnDistribution(dailyReturns);
+  const captureRatios = calculateCaptureRatios(data);
 
   if (!metrics) return null;
 
@@ -208,17 +219,26 @@ const Index = () => {
         <div className="grid gap-4 md:grid-cols-3">
           <CorrelationCard correlations={correlations} />
           <RiskMetricsCard riskMetrics={riskMetrics} />
-          <PortfolioHealthScore 
-            riskMetrics={riskMetrics}
-            annualizedReturn={metrics.annualizedReturn}
-            maxDrawdown={riskMetrics.maxDrawdown}
-          />
+          <div className="space-y-4">
+            <PortfolioHealthScore 
+              riskMetrics={riskMetrics}
+              annualizedReturn={metrics.annualizedReturn}
+              maxDrawdown={riskMetrics.maxDrawdown}
+            />
+            <CaptureRatioCard captureRatios={captureRatios} />
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">
           <RollingMetricsChart rollingMetrics={rollingMetrics} portfolioData={data} />
           <DrawdownChart data={data} />
         </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <ReturnDistributionChart distribution={returnDistribution} />
+        </div>
+
+        <MonthlyReturnsHeatmap monthlyReturns={monthlyReturns} />
 
         <InvestmentAnalysis
           annualizedReturn={metrics.annualizedReturn}

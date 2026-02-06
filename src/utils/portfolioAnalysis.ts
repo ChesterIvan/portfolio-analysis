@@ -42,6 +42,32 @@ export interface RiskMetrics {
   };
   calmarRatio: number;
   informationRatio: number;
+  var95: number;
+  var99: number;
+  cvar95: number;
+  cvar99: number;
+}
+
+export interface MonthlyReturn {
+  year: number;
+  month: number;
+  return: number;
+}
+
+export interface ReturnDistribution {
+  bins: { range: string; count: number; midpoint: number }[];
+  mean: number;
+  median: number;
+  skewness: number;
+  kurtosis: number;
+  min: number;
+  max: number;
+}
+
+export interface CaptureRatios {
+  upCapture: { sha: number; she: number; csi300: number };
+  downCapture: { sha: number; she: number; csi300: number };
+  captureRatio: { sha: number; she: number; csi300: number };
 }
 
 export interface RollingMetrics {
@@ -319,6 +345,137 @@ export function calculateInformationRatio(portfolioReturns: number[], benchmarkR
   return trackingError === 0 ? 0 : (meanExcessReturn * 252) / (trackingError * Math.sqrt(252));
 }
 
+// Calculate Value at Risk (VaR) using historical simulation
+export function calculateVaR(returns: number[], confidenceLevel: number): number {
+  if (returns.length === 0) return 0;
+  const sorted = [...returns].sort((a, b) => a - b);
+  const index = Math.floor((1 - confidenceLevel) * sorted.length);
+  return sorted[index] * 100; // Return as percentage
+}
+
+// Calculate Conditional VaR (Expected Shortfall)
+export function calculateCVaR(returns: number[], confidenceLevel: number): number {
+  if (returns.length === 0) return 0;
+  const sorted = [...returns].sort((a, b) => a - b);
+  const index = Math.floor((1 - confidenceLevel) * sorted.length);
+  const tailReturns = sorted.slice(0, index + 1);
+  if (tailReturns.length === 0) return 0;
+  const mean = tailReturns.reduce((sum, r) => sum + r, 0) / tailReturns.length;
+  return mean * 100; // Return as percentage
+}
+
+// Calculate monthly returns
+export function calculateMonthlyReturns(data: PortfolioData[]): MonthlyReturn[] {
+  if (data.length === 0) return [];
+
+  const monthlyData = new Map<string, { first: PortfolioData; last: PortfolioData }>();
+
+  data.forEach(row => {
+    const date = new Date(row.date);
+    const key = `${date.getFullYear()}-${date.getMonth()}`;
+    if (!monthlyData.has(key)) {
+      monthlyData.set(key, { first: row, last: row });
+    } else {
+      const existing = monthlyData.get(key)!;
+      monthlyData.set(key, { first: existing.first, last: row });
+    }
+  });
+
+  return Array.from(monthlyData.entries()).map(([key, { first, last }]) => {
+    const [year, month] = key.split('-').map(Number);
+    return {
+      year,
+      month,
+      return: first.shareValue > 0 ? ((last.shareValue - first.shareValue) / first.shareValue) * 100 : 0,
+    };
+  }).sort((a, b) => a.year - b.year || a.month - b.month);
+}
+
+// Calculate return distribution statistics
+export function calculateReturnDistribution(returns: number[]): ReturnDistribution {
+  if (returns.length === 0) {
+    return { bins: [], mean: 0, median: 0, skewness: 0, kurtosis: 0, min: 0, max: 0 };
+  }
+
+  const pctReturns = returns.map(r => r * 100);
+  const sorted = [...pctReturns].sort((a, b) => a - b);
+  const n = sorted.length;
+  const mean = pctReturns.reduce((sum, r) => sum + r, 0) / n;
+  const median = n % 2 === 0 ? (sorted[n / 2 - 1] + sorted[n / 2]) / 2 : sorted[Math.floor(n / 2)];
+
+  const variance = pctReturns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / n;
+  const stdDev = Math.sqrt(variance);
+
+  // Skewness
+  const skewness = stdDev === 0 ? 0 :
+    (pctReturns.reduce((sum, r) => sum + Math.pow((r - mean) / stdDev, 3), 0) / n);
+
+  // Excess Kurtosis
+  const kurtosis = stdDev === 0 ? 0 :
+    (pctReturns.reduce((sum, r) => sum + Math.pow((r - mean) / stdDev, 4), 0) / n) - 3;
+
+  // Create histogram bins
+  const min = sorted[0];
+  const max = sorted[n - 1];
+  const binCount = Math.min(30, Math.max(10, Math.ceil(Math.sqrt(n))));
+  const binWidth = (max - min) / binCount;
+
+  const bins = [];
+  for (let i = 0; i < binCount; i++) {
+    const binStart = min + i * binWidth;
+    const binEnd = binStart + binWidth;
+    const count = pctReturns.filter(r => r >= binStart && (i === binCount - 1 ? r <= binEnd : r < binEnd)).length;
+    bins.push({
+      range: `${binStart.toFixed(2)}%`,
+      count,
+      midpoint: (binStart + binEnd) / 2,
+    });
+  }
+
+  return { bins, mean, median, skewness, kurtosis, min, max };
+}
+
+// Calculate Up/Down Capture Ratios
+export function calculateCaptureRatios(data: PortfolioData[]): CaptureRatios {
+  const portfolioReturns = calculateDailyReturns(data);
+  const benchmarks = ['sha', 'she', 'csi300'] as const;
+
+  const result: CaptureRatios = {
+    upCapture: { sha: 0, she: 0, csi300: 0 },
+    downCapture: { sha: 0, she: 0, csi300: 0 },
+    captureRatio: { sha: 0, she: 0, csi300: 0 },
+  };
+
+  for (const benchmark of benchmarks) {
+    const benchmarkReturns = calculateBenchmarkDailyReturns(data, benchmark);
+    const n = Math.min(portfolioReturns.length, benchmarkReturns.length);
+
+    let upPortfolio = 0, upBenchmark = 0, upCount = 0;
+    let downPortfolio = 0, downBenchmark = 0, downCount = 0;
+
+    for (let i = 0; i < n; i++) {
+      if (benchmarkReturns[i] > 0) {
+        upPortfolio += portfolioReturns[i];
+        upBenchmark += benchmarkReturns[i];
+        upCount++;
+      } else if (benchmarkReturns[i] < 0) {
+        downPortfolio += portfolioReturns[i];
+        downBenchmark += benchmarkReturns[i];
+        downCount++;
+      }
+    }
+
+    const upCapture = upBenchmark !== 0 ? (upPortfolio / upBenchmark) * 100 : 0;
+    const downCapture = downBenchmark !== 0 ? (downPortfolio / downBenchmark) * 100 : 0;
+
+    result.upCapture[benchmark] = upCapture;
+    result.downCapture[benchmark] = downCapture;
+    result.captureRatio[benchmark] = downCapture !== 0 ? upCapture / downCapture : 0;
+  }
+
+  return result;
+}
+
 // Calculate comprehensive risk metrics
 export function calculateRiskMetrics(data: PortfolioData[]): RiskMetrics {
   if (data.length === 0) {
@@ -331,6 +488,10 @@ export function calculateRiskMetrics(data: PortfolioData[]): RiskMetrics {
       alpha: { sha: 0, she: 0, csi300: 0 },
       calmarRatio: 0,
       informationRatio: 0,
+      var95: 0,
+      var99: 0,
+      cvar95: 0,
+      cvar99: 0,
     };
   }
 
@@ -370,6 +531,12 @@ export function calculateRiskMetrics(data: PortfolioData[]): RiskMetrics {
   }
   
   const informationRatio = calculateInformationRatio(portfolioReturns, avgBenchmarkReturns);
+
+  // Calculate VaR and CVaR
+  const var95 = calculateVaR(portfolioReturns, 0.95);
+  const var99 = calculateVaR(portfolioReturns, 0.99);
+  const cvar95 = calculateCVaR(portfolioReturns, 0.95);
+  const cvar99 = calculateCVaR(portfolioReturns, 0.99);
   
   return {
     volatility,
@@ -380,6 +547,10 @@ export function calculateRiskMetrics(data: PortfolioData[]): RiskMetrics {
     alpha,
     calmarRatio,
     informationRatio,
+    var95,
+    var99,
+    cvar95,
+    cvar99,
   };
 }
 

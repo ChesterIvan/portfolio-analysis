@@ -86,6 +86,41 @@ export function RiskMetricsCard({ riskMetrics }: RiskMetricsCardProps) {
           </div>
         </div>
 
+        {/* Value at Risk */}
+        <div className="space-y-2">
+          <h4 className="text-sm font-semibold text-muted-foreground">Value at Risk (Daily)</h4>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">VaR (95%)</span>
+                <Badge variant="outline" className="text-red-600">
+                  {riskMetrics.var95.toFixed(2)}%
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">VaR (99%)</span>
+                <Badge variant="outline" className="text-red-600">
+                  {riskMetrics.var99.toFixed(2)}%
+                </Badge>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">CVaR (95%)</span>
+                <Badge variant="outline" className="text-red-600">
+                  {riskMetrics.cvar95.toFixed(2)}%
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">CVaR (99%)</span>
+                <Badge variant="outline" className="text-red-600">
+                  {riskMetrics.cvar99.toFixed(2)}%
+                </Badge>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Beta Analysis */}
         <div className="space-y-3">
           <h4 className="text-sm font-semibold text-muted-foreground">Beta (Market Sensitivity)</h4>
@@ -153,6 +188,8 @@ export function RiskMetricsCard({ riskMetrics }: RiskMetricsCardProps) {
               <p><strong>Volatility:</strong> {riskMetrics.volatility < 15 ? "Low" : riskMetrics.volatility < 25 ? "Moderate" : "High"} risk</p>
               <p><strong>Sharpe:</strong> {riskMetrics.sharpeRatio > 1 ? "Excellent" : riskMetrics.sharpeRatio > 0.5 ? "Good" : "Poor"} risk-adjusted returns</p>
               <p><strong>Beta:</strong> {riskMetrics.beta.csi300 < 0.8 ? "Defensive" : riskMetrics.beta.csi300 > 1.2 ? "Aggressive" : "Market-like"} sensitivity</p>
+              <p><strong>VaR (95%):</strong> On a typical bad day (1 in 20), expect up to {Math.abs(riskMetrics.var95).toFixed(2)}% loss</p>
+              <p><strong>CVaR (95%):</strong> On worst days beyond VaR, average loss is {Math.abs(riskMetrics.cvar95).toFixed(2)}%</p>
             </div>
           </div>
         </div>
