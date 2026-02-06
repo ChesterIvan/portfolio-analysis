@@ -58,7 +58,8 @@ const Index = () => {
       } else {
         // Load default CSV and save to database
         try {
-          const response = await fetch("/PORTFOLIO_SNAPSHOT.csv");
+          const csvUrl = new URL("PORTFOLIO_SNAPSHOT.csv", import.meta.env.BASE_URL).toString();
+          const response = await fetch(csvUrl);
           const csvText = await response.text();
           const parsedData = parseCSV(csvText);
           

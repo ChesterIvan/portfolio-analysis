@@ -1,4 +1,4 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase, isSupabaseEnabled } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { PortfolioData } from "./portfolioAnalysis";
 
@@ -8,6 +8,7 @@ export const savePortfolioToDatabase = async (
   name: string,
   data: PortfolioData[]
 ): Promise<string | null> => {
+  if (!isSupabaseEnabled) return null;
   try {
     // Create portfolio entry
     const { data: portfolio, error: portfolioError } = await supabase
@@ -45,6 +46,7 @@ export const savePortfolioToDatabase = async (
 export const loadPortfolioFromDatabase = async (
   portfolioId: string
 ): Promise<PortfolioData[]> => {
+  if (!isSupabaseEnabled) return [];
   try {
     const PAGE_SIZE = 1000;
     let from = 0;
@@ -110,6 +112,7 @@ export const loadPortfolioFromDatabase = async (
 };
 
 export const listPortfolios = async () => {
+  if (!isSupabaseEnabled) return [];
   try {
     const { data, error } = await supabase
       .from('portfolios')
@@ -136,6 +139,7 @@ export const addPortfolioRecord = async (
     csi300: number;
   }
 ) => {
+  if (!isSupabaseEnabled) return false;
   try {
     const { error } = await supabase
       .from('portfolio_data')
@@ -167,6 +171,7 @@ export const updatePortfolioRecord = async (
     csi300: number;
   }
 ) => {
+  if (!isSupabaseEnabled) return false;
   try {
     const { error } = await supabase
       .from('portfolio_data')
@@ -191,6 +196,7 @@ export const getRecordByDate = async (
   portfolioId: string,
   date: string
 ) => {
+  if (!isSupabaseEnabled) return null;
   try {
     const { data, error } = await supabase
       .from('portfolio_data')
@@ -208,6 +214,7 @@ export const getRecordByDate = async (
 };
 
 export const getRecordById = async (recordId: string) => {
+  if (!isSupabaseEnabled) return null;
   try {
     const { data, error } = await supabase
       .from('portfolio_data')
@@ -228,6 +235,7 @@ export const getRecordsByDateRange = async (
   startDate: string,
   endDate: string
 ) => {
+  if (!isSupabaseEnabled) return [];
   try {
     const { data, error } = await supabase
       .from('portfolio_data')
